@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:core';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/animation.dart';
 
 void main() => runApp(new MyApp());
 
@@ -46,9 +47,28 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => new _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+enum DialogDemoAction {
+  cancel,
+  discard,
+  disagree,
+  agree,
+}
+
+const String _alertWithoutTitleText = 'Discard draft?';
+
+const String _alertWithTitleText =
+    'Let Google help apps determine location. This means sending anyonmous location '
+    'data to Google, even when no apps are running.';
+
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
+  Animation<double> animation;
+  AnimationController controller;
+
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       new GlobalKey<RefreshIndicatorState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+
   var client = createHttpClient();
   var prices = [];
 
@@ -56,6 +76,20 @@ class _MyHomePageState extends State<MyHomePage> {
   initState() {
     super.initState();
     getPrices();
+    controller = new AnimationController(
+        duration: const Duration(milliseconds: 2000), vsync: this);
+    animation = new Tween(begin: 0.0, end: 300.0).animate(controller)
+      ..addListener(() {
+        setState(() {
+          // the state that has changed here is the animation object’s value
+        });
+      });
+//    controller.forward();
+  }
+
+  dispose() {
+    controller.dispose();
+    super.dispose();
   }
 
   getPrices() async {
@@ -86,9 +120,53 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  onEditCoin(TextStyle dialogTextStyle) {}
+
+  void showDemoDialog<T>({BuildContext context, Widget child}) {
+    controller.forward();
+//    showDialog<T>(
+//      context: context,
+//      child: child,
+//    ).then<Null>((T value) {
+//      controller.forward();
+//      // The value passed to Navigator.pop() or null.
+//      if (value != null) {
+//        _scaffoldKey.currentState.showSnackBar(
+//            new SnackBar(content: new Text('You selected: $value')));
+//      }
+//    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final TextStyle dialogTextStyle =
+        theme.textTheme.subhead.copyWith(color: theme.textTheme.caption.color);
+    print(animation.value);
     return new Scaffold(
+        floatingActionButton: new FloatingActionButton(
+            backgroundColor: Colors.green,
+            onPressed: () {
+              showDemoDialog<DialogDemoAction>(
+                  context: context,
+                  child: new Container(
+                      child: new AlertDialog(
+                          content: new Text(_alertWithoutTitleText,
+                              style: dialogTextStyle),
+                          actions: <Widget>[
+                        new FlatButton(
+                            child: const Text('CANCEL'),
+                            onPressed: () {
+                              Navigator.pop(context, DialogDemoAction.cancel);
+                            }),
+                        new FlatButton(
+                            child: const Text('DISCARD'),
+                            onPressed: () {
+                              Navigator.pop(context, DialogDemoAction.discard);
+                            })
+                      ])));
+            },
+            child: new Icon(Icons.add)),
         appBar: new AppBar(title: new Text(widget.title)),
         body: new Container(
             alignment: Alignment.bottomCenter,
